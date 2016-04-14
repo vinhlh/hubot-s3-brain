@@ -2,7 +2,7 @@
 #   Stores the brain in Amazon S3
 #
 # Dependencies:
-#   "aws2js": "0.7.10"
+#   "aws-sdk": "2.x.x"
 #
 # Configuration:
 #   HUBOT_S3_BRAIN_ACCESS_KEY_ID      - AWS Access Key ID with S3 permissions
@@ -51,9 +51,7 @@
 #   Iristyle
 
 util  = require 'util'
-AWS   = require 'aws-sdk'
-
-AWS.config.update { region: process.env.HUBOT_S3_BRAIN_REGION }
+aws   = require 'aws-sdk'
 
 module.exports = (robot) ->
 
@@ -64,17 +62,19 @@ module.exports = (robot) ->
   # default to 30 minutes (in seconds)
   save_interval     = process.env.HUBOT_S3_BRAIN_SAVE_INTERVAL || 30 * 60
   brain_file_name   = process.env.HUBOT_S3_BRAIN_FILE_NAME || 'brain-dump.json'
+  region            = process.env.HUBOT_S3_BRAIN_REGION
 
-  if !key && !secret && !bucket
+  if !key && !secret && !bucket && !region
     throw new Error('S3 brain requires HUBOT_S3_BRAIN_ACCESS_KEY_ID, ' +
-      'HUBOT_S3_BRAIN_SECRET_ACCESS_KEY and HUBOT_S3_BRAIN_BUCKET configured')
+      'HUBOT_S3_BRAIN_SECRET_ACCESS_KEY and HUBOT_S3_BRAIN_BUCKET and HUBOT_S3_BRAIN_REGION configured')
 
   save_interval = parseInt(save_interval)
   if isNaN(save_interval)
     throw new Error('HUBOT_S3_BRAIN_SAVE_INTERVAL must be an integer')
 
   # init s3
-  s3 = new AWS.S3
+  aws.config.update { region: region }
+  s3 = new aws.S3
 
   store_brain = (brain_data, callback) ->
     if !loaded
@@ -96,7 +96,6 @@ module.exports = (robot) ->
   store_current_brain = () ->
     store_brain robot.brain.data
 
-  # s3.get brain_file_name, 'buffer', (err, response) ->
   s3.getObject { Bucket: bucket, Key: brain_file_name, ResponseContentType: 'Buffer' }, (err, response) ->
     # unfortunately S3 gives us a 403 if we have access denied OR
     # the file is simply missing, so no way of knowing if IAM policy is bad
@@ -106,9 +105,12 @@ module.exports = (robot) ->
     # try to store an empty placeholder to see if IAM settings are valid
     if err then store_brain {}, save_handler
 
-    if response && response.buffer
-      robot.brain.mergeData JSON.parse(response.buffer.toString())
+    if response && response.Body
+      brain_data = response.Body.toString()
+      robot.logger.debug "Got brain data from s3 #{brain_data}"
+      robot.brain.mergeData JSON.parse(brain_data)
     else
+      robot.logger.debug "Got an empty S3 brain!"
       robot.brain.mergeData {}
 
   robot.brain.on 'loaded', () ->
