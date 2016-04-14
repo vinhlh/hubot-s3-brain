@@ -1,0 +1,23 @@
+{
+  "name": "hubot-s3-brain",
+  "version": "1.0.0",
+  "description": "Store hubot brain in AWS S3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vinhlh/hubot-s3-brain.git"
+  },
+  "keywords": [
+    "brain",
+    "s3",
+    "hubot"
+  ],
+  "author": "Vinh Le <hung.vjnh@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vinhlh/hubot-s3-brain/issues"
+  },
+  "homepage": "https://github.com/vinhlh/hubot-s3-brain#readme",
+  "dependencies": {
+    "aws-sdk": "^2.3.3"
+  }
+}
